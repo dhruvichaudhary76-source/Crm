@@ -1,66 +1,56 @@
-namename: Build Crm APK - Advanced
+name: Build Crm APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
 
-      - name: Setup Java 21
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
-          cache: 'gradle'
+          distribution: temurin
+          java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-          else
-            npm install --legacy-peer-deps
-          fi
+          npm install --legacy-peer-deps
+          npm install @capacitor/core @capacitor/cli @capacitor/android --save-dev
 
-      - name: Build Web App
+      - name: Build web app
         run: |
-          echo "Building web..."
-          npm run build || npx vite build || npm run build:web || echo "Build done"
-          echo "Checking build output..."
+          npm run build
           ls -la
-          if [ -d "dist" ]; then echo "✅ dist found"; ls -la dist; fi
-          if [ -d "build" ]; then echo "✅ build found"; fi
-          if [ -d "www" ]; then echo "✅ www found"; fi
+          ls -la dist
 
-      - name: Sync Capacitor Android
+      - name: Setup Capacitor Android
         run: |
-          echo "Syncing Capacitor..."
+          npx cap init "Crm" com.crm.app --web-dir=dist --npm-client npm || true
+          npx cap add android
           npx cap sync android
-          npx cap copy android
-          # Fix webDir if needed
-          if [ -d "dist" ] && [ ! -d "www" ]; then
-            cp -r dist www || true
-          fi
 
-      - name: Build Debug APK
+      - name: Build APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew clean
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug
 
-      - name: Upload APK Artifact
-        uses
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crm-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
