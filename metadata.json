@@ -1,0 +1,6 @@
+{
+  "name": "Chat Hub - CRM, Team & Finance",
+  "description": "Team management and customer CRM system with role-based experience for Admin, Team Lead, and Team Member, Indian Rupee finance, and Chat Hub.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
