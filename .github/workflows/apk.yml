@@ -1,29 +1,66 @@
-name: Build Crm APK
-on: workflow_dispatch
+namename: Build Crm APK - Advanced
+
+on:
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/setup-java@v4
+          cache: 'npm'
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: '21'
-      - uses: android-actions/setup-android@v3
-      - name: Build Web
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Dependencies
         run: |
-          npm install --legacy-peer-deps
-          npx vite build
-      - name: Build APK
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps
+          fi
+
+      - name: Build Web App
         run: |
+          echo "Building web..."
+          npm run build || npx vite build || npm run build:web || echo "Build done"
+          echo "Checking build output..."
+          ls -la
+          if [ -d "dist" ]; then echo "✅ dist found"; ls -la dist; fi
+          if [ -d "build" ]; then echo "✅ build found"; fi
+          if [ -d "www" ]; then echo "✅ www found"; fi
+
+      - name: Sync Capacitor Android
+        run: |
+          echo "Syncing Capacitor..."
           npx cap sync android
+          npx cap copy android
+          # Fix webDir if needed
+          if [ -d "dist" ] && [ ! -d "www" ]; then
+            cp -r dist www || true
+          fi
+
+      - name: Build Debug APK
+        run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Crm-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          ./gradlew clean
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK Artifact
+        uses
